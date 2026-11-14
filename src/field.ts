@@ -121,9 +121,12 @@ export function plantField(): Sector[] {
         x, y: groundHeight(x, z), z, scale: .84 + next() * .48, angle: next() * Math.PI * 2,
         color: rowColor(x, z), shade: next(),
       });
-      if (next() < .19 && distanceToPath(x + .46, z) >= .5) {
+      if (next() < .19) {
         const offset = z + (next() > .5 ? .16 : -.16);
-        sectors[iz * columns + ix].flowers.push({
+        if (distanceToPath(x + .46, offset) < .5) continue;
+        const offsetX = Math.floor((x + .46 + halfWidth) / sectorSize);
+        const offsetZ = Math.floor((offset + halfDepth) / sectorSize);
+        sectors[offsetZ * columns + offsetX].flowers.push({
           x: x + .46, y: groundHeight(x + .46, offset), z: offset,
           scale: .76 + next() * .45, angle: next() * Math.PI * 2,
           color: rowColor(x + .46, offset), shade: next(),
