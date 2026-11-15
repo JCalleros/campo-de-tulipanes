@@ -1,10 +1,10 @@
 import {
-  BackSide, BufferAttribute, Color, FogExp2, HemisphereLight, DirectionalLight, Mesh,
+  BackSide, Color, FogExp2, HemisphereLight, DirectionalLight, Mesh,
   MeshStandardMaterial, PlaneGeometry, Scene, ShaderMaterial, SphereGeometry, Vector3,
 } from 'three';
 import { groundHeight } from './field';
 
-const sun = new Vector3(-.62, .21, -.76).normalize();
+const sun = new Vector3(-.62, .17, -.76).normalize();
 
 function makeTerrain() {
   const size = 768;
@@ -63,9 +63,12 @@ function makeTerrain() {
   return new Mesh(geometry, material);
 }
 
+const hazeColor = new Color('#e6b796');
+
 function makeSky() {
   return new Mesh(new SphereGeometry(550, 28, 16), new ShaderMaterial({
-    side: BackSide, depthWrite: false, fog: false, uniforms: { sun: { value: sun } },
+    side: BackSide, depthWrite: false, fog: false,
+    uniforms: { sun: { value: sun }, haze: { value: hazeColor } },
     vertexShader: `
       varying vec3 direction;
       void main() {
@@ -76,25 +79,57 @@ function makeSky() {
     fragmentShader: `
       varying vec3 direction;
       uniform vec3 sun;
-      float noise(vec2 p) {
-        vec2 i = floor(p), f = fract(p);
-        f = f * f * (3.0 - 2.0 * f);
-        return mix(mix(fract(sin(dot(i,vec2(113.0,71.0))*41.13)*43758.5),
-          fract(sin(dot(i+vec2(1,0),vec2(113.0,71.0))*41.13)*43758.5),f.x),
-          mix(fract(sin(dot(i+vec2(0,1),vec2(113.0,71.0))*41.13)*43758.5),
-          fract(sin(dot(i+1.0,vec2(113.0,71.0))*41.13)*43758.5),f.x),f.y);
+      uniform vec3 haze;
+
+      float hash(vec2 p) {
+        vec3 q = fract(vec3(p.xyx) * .1031);
+        q += dot(q, q.yzx + 33.33);
+        return fract((q.x + q.y) * q.z);
       }
+
+      float noise(vec2 p) {
+        vec2 cell = floor(p);
+        vec2 t = fract(p);
+        t = t * t * (3.0 - 2.0 * t);
+        return mix(mix(hash(cell), hash(cell + vec2(1,0)), t.x),
+          mix(hash(cell + vec2(0,1)), hash(cell + vec2(1,1)), t.x), t.y);
+      }
+
+      float cloudDensity(vec2 p) {
+        mat2 turn = mat2(.87, -.50, .50, .87);
+        float broad = noise(p);
+        p = turn * p * 2.03;
+        float middle = noise(p);
+        p = turn * p * 2.07;
+        return broad * .60 + middle * .28 + noise(p) * .12;
+      }
+
       void main() {
         vec3 d = normalize(direction);
-        float glow = clamp(dot(d,sun),0.0,1.0);
-        vec3 horizon = vec3(.72,.46,.31);
-        vec3 sky = mix(horizon, vec3(.28,.43,.45), smoothstep(-.01,.67,d.y));
-        sky += vec3(.28,.17,.065) * pow(glow,12.0);
-        vec2 p = vec2(atan(d.z,d.x) * 5.0, d.y * 18.0);
-        float n = noise(p) * .62 + noise(p * 2.31) * .28 + noise(p * 4.7) * .1;
-        float cloud = smoothstep(.56,.77,n) * smoothstep(.025,.12,d.y) * (1.0 - smoothstep(.36,.67,d.y));
-        sky = mix(sky, vec3(.88,.71,.63), cloud * .66);
-        sky = mix(sky, vec3(1.0,.92,.68), smoothstep(.99925,.99963,glow));
+        float elevation = max(d.y, 0.0);
+        float sunward = max(dot(d, sun), 0.0);
+        vec3 twilight = mix(vec3(.38,.28,.38), vec3(.65,.36,.22), pow(sunward, 4.0));
+        vec3 zenith = vec3(.057,.174,.32);
+        vec3 sky = mix(haze, twilight, smoothstep(0.0,.17,elevation));
+        sky = mix(sky, zenith, smoothstep(.11,.9,elevation));
+        sky += vec3(.28,.15,.063) * pow(sunward, 18.0) * smoothstep(0.0,.07,elevation);
+        sky += vec3(.36,.21,.08) * pow(sunward, 320.0);
+        sky = mix(sky, vec3(1.0,.94,.72), smoothstep(.99979,.99989,sunward));
+
+        if (elevation > .025) {
+          vec2 plane = d.xz / max(elevation, .06);
+          vec2 p = plane * vec2(.78, 1.52) + vec2(8.1, -2.6);
+          float density = cloudDensity(p);
+          float detail = noise(p * 5.3 + 9.1);
+          float horizonFade = smoothstep(.028,.19,elevation);
+          float structure = density + (detail - .5) * .075;
+          float cover = smoothstep(.48,.70,structure) * horizonFade;
+          float lit = smoothstep(.38,.68,density);
+          vec3 cloud = mix(vec3(.29,.23,.29), vec3(.75,.57,.48), lit);
+          cloud = mix(cloud, vec3(.95,.69,.44), pow(sunward, 7.0) * .75);
+          sky = mix(sky, cloud, cover * .86);
+        }
+
         gl_FragColor = vec4(sky, 1.0);
         #include <colorspace_fragment>
       }
@@ -103,7 +138,7 @@ function makeSky() {
 }
 
 export function createLandscape(scene: Scene) {
-  scene.fog = new FogExp2(new Color('#e6b796'), .0045);
+  scene.fog = new FogExp2(hazeColor, .0045);
   const sky = makeSky();
   sky.frustumCulled = false;
   sky.renderOrder = -10;
