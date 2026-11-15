@@ -1,4 +1,5 @@
 import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { createFieldCollision } from './collision';
 import { bindControls } from './controls';
 import { plantField } from './field';
 import { createFlowers } from './flowers';
@@ -14,9 +15,10 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
   renderer.toneMappingExposure = 1.19;
   const scene = new Scene();
   const camera = new PerspectiveCamera(62, 1, .08, 620);
-  const walker = new Walker(camera);
+  const sectors = plantField();
+  const walker = new Walker(camera, createFieldCollision(sectors));
   const landscape = createLandscape(scene);
-  const flowers = createFlowers(plantField());
+  const flowers = createFlowers(sectors);
   scene.add(flowers.group);
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');

@@ -7,7 +7,6 @@ export const entrance = { x: 0, z: 130 };
 export const overlook = { x: 0, z: -117 };
 
 const rowPitch = 2.8;
-const bedHalfWidth = .62;
 const southJunction = 119;
 const northJunction = -117;
 
@@ -65,17 +64,6 @@ export function distanceToPath(x: number, z: number): number {
   const loop = lateral === undefined ? Infinity : Math.abs(x - lateral) - 1.45;
   const viewpoint = Math.hypot(x - overlook.x, (z - overlook.z) * 1.1) - 7;
   return Math.min(path, loop, viewpoint);
-}
-
-export function distanceToBed(x: number, z: number): number {
-  if (Math.abs(x) > halfWidth - 8 || Math.abs(z) > halfDepth - 6) return Infinity;
-  const row = (z - rowBend(x)) / rowPitch;
-  return Math.abs(row - Math.round(row)) * rowPitch - bedHalfWidth;
-}
-
-export function canWalk(x: number, z: number): boolean {
-  if (Math.abs(x) >= halfWidth - 2 || Math.abs(z) >= halfDepth - 2) return false;
-  return distanceToPath(x, z) < -.18 || distanceToBed(x, z) > .21;
 }
 
 export function rowColor(x: number, z: number): number {
