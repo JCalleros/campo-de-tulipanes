@@ -1,6 +1,6 @@
 # Jardín de Tulipanes
 
-Recorre un jardín de tulipanes en primera persona y descubre una dedicatoria al doblar el sendero. Al acercarte a la flor de borde dorado, pulsa E o usa el botón para leerla.
+Recorre un jardín de tulipanes en primera persona y descubre una dedicatoria al doblar el sendero. Al acercarte a la flor de pétalos veteados, pulsa E o usa el botón para leerla.
 
 ## Ejecutar en local
 

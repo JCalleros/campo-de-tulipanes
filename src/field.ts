@@ -57,8 +57,8 @@ export const beds = [
 
 const bend = loop.getPointAt(.16);
 const tangent = loop.getTangentAt(.16);
-const specialX = bend.x + tangent.z * (pathRadius + .15);
-const specialZ = bend.z - tangent.x * (pathRadius + .15);
+const specialX = bend.x + tangent.z * (pathRadius + .24);
+const specialZ = bend.z - tangent.x * (pathRadius + .24);
 export const specialFlower: Flower = {
   x: specialX, z: specialZ, y: groundHeight(specialX, specialZ),
   scale: 1.35, angle: .4, color: 3, shade: .5,
@@ -81,7 +81,7 @@ export function plantField(): Sector[] {
       const x = column + (next() - .5) * .44;
       const z = row + (next() - .5) * .44;
       const bed = beds.find(([cx, cz, rx, rz]) => ((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2 < 1);
-      if (!bed || distanceToPath(x, z) < .27 || Math.hypot(x - specialX, z - specialZ) < .82) continue;
+      if (!bed || distanceToPath(x, z) < .27 || Math.hypot(x - specialX, z - specialZ) < 1.10) continue;
       plant({ x, y: groundHeight(x, z), z, scale: .87 + next() * .23, angle: next() * Math.PI * 2,
         color: bed[4], shade: next() });
     }

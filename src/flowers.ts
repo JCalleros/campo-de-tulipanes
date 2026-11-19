@@ -1,9 +1,11 @@
 import {
   Box3, BufferAttribute, BufferGeometry, Color, CylinderGeometry, DoubleSide, Group, InstancedMesh,
-  Mesh, MeshStandardMaterial, Object3D,
+  MeshStandardMaterial, Object3D,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { palette, sectorSize, specialFlower, type Sector } from './field';
+
+import { createSpecialTulip } from './special-tulip';
 
 function tint(geometry: BufferGeometry, color: Color, isPetal: boolean): BufferGeometry {
   const count = geometry.getAttribute('position').count;
@@ -33,7 +35,7 @@ function surface(across: number, along: number, vertex: (u: number, v: number) =
   return mesh;
 }
 
-function makeFlower(detail: boolean, special = false) {
+function makeFlower(detail: boolean) {
   const stem = new CylinderGeometry(.013, .021, .68, detail ? 6 : 3, 1)
     .rotateZ(-.055).translate(.012, .34, 0);
   stem.deleteAttribute('uv');
@@ -48,15 +50,15 @@ function makeFlower(detail: boolean, special = false) {
     geometries.push(tint(leaf, new Color(i % 2 ? '#6d8b3b' : '#537838'), false));
   }
 
-  const petalCount = special ? 10 : detail ? 6 : 3;
+  const petalCount = detail ? 6 : 3;
   for (let i = 0; i < petalCount; i++) {
     const inner = i % 2 === 1 && detail;
-    const across = special ? 12 : detail ? 6 : 3;
-    const along = special ? 16 : detail ? 7 : 4;
+    const across = detail ? 6 : 3;
+    const along = detail ? 7 : 4;
     const petal = surface(across, along, (u, v) => {
       const width = (.01 + .115 * Math.sin(Math.PI * (v * .86 + .05)) ** .72) * (inner ? .89 : 1);
-      const curl = .031 + .116 * Math.sin(v * 2.12) + .047 * v + (special ? .15 * v ** 2 : 0);
-      return [u * width * (special ? 1.24 : 1), .64 + v * (inner ? .265 : .29) - .046 * u * u * v ** 3,
+      const curl = .031 + .116 * Math.sin(v * 2.12) + .047 * v;
+      return [u * width, .64 + v * (inner ? .265 : .29) - .046 * u * u * v ** 3,
         (curl - width * u * u * .53) * (inner ? .8 : 1)];
     });
     petal.rotateY(i * Math.PI * 2 / petalCount);
@@ -66,12 +68,7 @@ function makeFlower(detail: boolean, special = false) {
     const colors = petal.getAttribute('color');
     for (let j = 0; j < positions.count; j++) {
       const light = .52 + Math.min(1, Math.max(0, (positions.getY(j) - .64) / .28)) * .48;
-      if (special) {
-        const v = Math.floor(j / (across + 1)) / along;
-        const u = Math.abs(2 * (j % (across + 1)) / across - 1);
-        petalColor.set(v >= .93 || (u > .96 && v > .36) ? '#ffe386' : inner ? '#d74787' : '#fa84ae');
-        colors.setXYZ(j, petalColor.r * light, petalColor.g * light, petalColor.b * light);
-      } else colors.setXYZ(j, light, light, light);
+      colors.setXYZ(j, light, light, light);
     }
     geometries.push(petal);
   }
@@ -116,11 +113,8 @@ export function createFlowers(sectors: Sector[]) {
 
   const transform = new Object3D();
   const color = new Color();
-  const special = new Mesh(makeFlower(true, true), material);
-  special.position.set(specialFlower.x, specialFlower.y, specialFlower.z);
-  special.rotation.y = specialFlower.angle;
-  special.scale.setScalar(specialFlower.scale);
-  group.add(special);
+  const special = createSpecialTulip();
+  group.add(special.root);
   const plots = sectors.filter(plot => plot.flowers.length).map(plot => {
     const flowers = plot.flowers.filter(flower => flower !== specialFlower);
     const mesh = new InstancedMesh(far, material, flowers.length);
@@ -150,6 +144,7 @@ export function createFlowers(sectors: Sector[]) {
   return {
     group,
     update(x: number, z: number, compact: boolean, time: number, reducedMotion: boolean): void {
+      special.update(time, Math.hypot(x - specialFlower.x, z - specialFlower.z), reducedMotion);
       windTime.value = time;
       windStrength.value = reducedMotion ? 0 : 1;
       if (compact === lastCompact && Math.abs(lastX - x) < 2 && Math.abs(lastZ - z) < 2) return;
@@ -170,7 +165,7 @@ export function createFlowers(sectors: Sector[]) {
     dispose(): void {
       for (const { mesh } of plots) mesh.dispose();
       material.dispose();
-      special.geometry.dispose();
+      special.dispose();
       near.dispose();
       far.dispose();
     },

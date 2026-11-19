@@ -28,7 +28,7 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
   let exploring = false;
   let paused = false;
   let flowerVisible = false;
-  const blossom = new Vector3(specialFlower.x, specialFlower.y + .85 * specialFlower.scale, specialFlower.z);
+  const blossom = new Vector3(specialFlower.x + .14, specialFlower.y + .96 * specialFlower.scale, specialFlower.z);
   const projected = new Vector3();
 
   function updatePrompt(): void {
