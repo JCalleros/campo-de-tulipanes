@@ -4,7 +4,8 @@ import {
 } from 'three';
 import { ParametricGeometry } from 'three/addons/geometries/ParametricGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { random, specialFlower } from './field';
+import { tulipTepal } from './tulip-tepal';
+import { specialFlower, random } from './field';
 
 const tau = Math.PI * 2;
 const smooth = (start: number, end: number, value: number) => {
@@ -116,30 +117,15 @@ export function createSpecialTulip() {
   const map = petalTexture();
   const silk = new MeshStandardMaterial({ map, side: DoubleSide, roughness: .48 });
   const petals: Mesh<ParametricGeometry, MeshStandardMaterial>[] = [];
-  const next = random(361);
-  for (const [layer, count] of [5, 4, 3].entries()) {
-    for (let k = 0; k < count; k++) {
-      const angle = tau * k / count + layer * .79 + next() * .12;
-      const phase = next() * tau;
-      const height = .32 - layer * .035 + next() * .025;
-      const spread = .28 - layer * .062 + next() * .018;
-      const geometry = new ParametricGeometry((s, v, p) => {
-        const u = 2 * s - 1;
-        const width = .20 + (.90 - layer * .025) * Math.sin(Math.PI * (.02 + .93 * v)) ** .55;
-        const theta = u * width + .11 * v * Math.sin(phase + v * 2);
-        const fold = .010 * Math.sin(u * 11 + phase) + .006 * Math.sin(u * 19 + v * 4);
-        const r = .017 + spread * Math.sin(v * 1.74) ** 1.2 + (.047 + fold) * v ** 5
-          + .009 * Math.cos(u * 9 + v * 1.6) * Math.sin(v * Math.PI);
-        const lip = v ** 3 * (.049 * u * u + .016 * Math.cos(u * 11 + phase) + .009 * Math.sin(u * 22 + phase));
-        p.set(Math.sin(theta) * r, height * v - lip, Math.cos(theta) * r);
-      }, 32, 30);
-      const pivot = new Group();
-      pivot.rotation.y = angle;
-      const petal = new Mesh(geometry, silk);
-      pivot.add(petal);
-      head.add(pivot);
-      petals.push(petal);
-    }
+  for (let i = 0; i < 6; i++) {
+    const geometry = tulipTepal(i, .402, .177, 32, 30);
+    const angle = i * tau / 6;
+    const pivot = new Group();
+    pivot.rotation.y = angle;
+    const petal = new Mesh(geometry, silk);
+    pivot.add(petal);
+    head.add(pivot);
+    petals.push(petal);
   }
   return {
     root,
@@ -147,10 +133,10 @@ export function createSpecialTulip() {
       const wind = reduced ? 0 : Math.sin(time * 1.37) + .3 * Math.sin(time * 2.51);
       root.rotation.z = -.035 + .037 * wind;
       root.rotation.x = reduced ? 0 : .019 * Math.sin(time * 1.13);
-      head.rotation.z = -.36 + .026 * wind;
-      const opening = reduced ? .10 : .17 * (1 - smooth(1.3, 4.2, distance));
+      head.rotation.z = -.085 + .016 * wind;
+      const opening = reduced ? .018 : .045 * (1 - smooth(1.3, 4.2, distance));
       for (let i = 0; i < petals.length; i++) {
-        petals[i].rotation.x = opening + (reduced ? 0 : .024 * Math.sin(time * 1.2 + i * .52));
+        petals[i].rotation.x = opening + (reduced ? 0 : .008 * Math.sin(time * 1.2 + i * .52));
       }
     },
     dispose() {

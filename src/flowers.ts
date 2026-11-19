@@ -1,10 +1,10 @@
 import {
   Box3, BufferAttribute, BufferGeometry, Color, CylinderGeometry, DoubleSide, Group, InstancedMesh,
-  MeshStandardMaterial, Object3D,
+  MeshStandardMaterial, Object3D, SphereGeometry,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { palette, sectorSize, specialFlower, type Sector } from './field';
-
+import { tulipTepal } from './tulip-tepal';
 import { createSpecialTulip } from './special-tulip';
 
 function tint(geometry: BufferGeometry, color: Color, isPetal: boolean): BufferGeometry {
@@ -36,38 +36,47 @@ function surface(across: number, along: number, vertex: (u: number, v: number) =
 }
 
 function makeFlower(detail: boolean) {
-  const stem = new CylinderGeometry(.013, .021, .68, detail ? 6 : 3, 1)
-    .rotateZ(-.055).translate(.012, .34, 0);
+  const bloomY = .65;
+  const stem = new CylinderGeometry(.014, .021, bloomY, detail ? 6 : 4, detail ? 6 : 3)
+    .translate(0, bloomY / 2, 0);
   stem.deleteAttribute('uv');
   const geometries = [tint(stem, new Color('#4e7031'), false)];
   const leafCount = detail ? 3 : 1;
   for (let i = 0; i < leafCount; i++) {
     const leaf = surface(detail ? 4 : 2, detail ? 7 : 3, (u, v) => {
       const width = Math.sin(v * Math.PI) ** .8 * .058;
-      return [u * width, .08 + i * .067 + Math.sin(v * 1.85) * .46, .35 * v ** 1.35 + .025 * u * u];
+      return [u * width, .08 + i * .067 + Math.sin(v * 1.85) * .46, .35 * v ** 1.35 + .025 * u * u * v];
     });
     leaf.rotateY(i * 2.4 + .42);
     geometries.push(tint(leaf, new Color(i % 2 ? '#6d8b3b' : '#537838'), false));
   }
 
-  const petalCount = detail ? 6 : 3;
-  for (let i = 0; i < petalCount; i++) {
-    const inner = i % 2 === 1 && detail;
-    const across = detail ? 6 : 3;
-    const along = detail ? 7 : 4;
-    const petal = surface(across, along, (u, v) => {
-      const width = (.01 + .115 * Math.sin(Math.PI * (v * .86 + .05)) ** .72) * (inner ? .89 : 1);
-      const curl = .031 + .116 * Math.sin(v * 2.12) + .047 * v;
-      return [u * width, .64 + v * (inner ? .265 : .29) - .046 * u * u * v ** 3,
-        (curl - width * u * u * .53) * (inner ? .8 : 1)];
-    });
-    petal.rotateY(i * Math.PI * 2 / petalCount);
-    const positions = petal.getAttribute('position');
-    const petalColor = new Color();
-    tint(petal, petalColor.setHex(0xffffff), true);
+  function oval(x: number, y: number, z: number, rx: number, ry: number, rz: number, color: string, petal = false) {
+    const geometry = new SphereGeometry(1, 6, 4).scale(rx, ry, rz).translate(x, y, z);
+    geometry.deleteAttribute('uv');
+    geometries.push(tint(geometry, new Color(color), petal));
+  }
+  oval(0, bloomY + .004, 0, .015, .012, .015, '#d3bcb4', true);
+  if (detail) {
+    oval(0, bloomY + .065, 0, .014, .054, .014, '#debf69');
+    for (let k = 0; k < 6; k++) {
+      const a = k * Math.PI / 3;
+      const x = .027 * Math.sin(a), z = .027 * Math.cos(a);
+      oval(x, bloomY + .055, z, .0045, .046, .0045, '#edcd83');
+      oval(x, bloomY + .101, z, .008, .018, .008, '#ae7739');
+    }
+  }
+  for (let i = 0; i < 6; i++) {
+    const across = detail ? 8 : 3;
+    const petal = tulipTepal(i, .31, .131, across, detail ? 10 : 5);
+    petal.rotateY(i * Math.PI / 3).translate(0, bloomY, 0);
+    petal.deleteAttribute('uv');
+    tint(petal, new Color(0xffffff), true);
     const colors = petal.getAttribute('color');
+    const positions = petal.getAttribute('position');
     for (let j = 0; j < positions.count; j++) {
-      const light = .52 + Math.min(1, Math.max(0, (positions.getY(j) - .64) / .28)) * .48;
+      const u = (j % (across + 1)) / across;
+      const light = .58 + (positions.getY(j) - bloomY) * 1.14 + .04 * Math.cos(u * 12);
       colors.setXYZ(j, light, light, light);
     }
     geometries.push(petal);
