@@ -4,20 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#201c19">
-    <meta name="description" content="Camina entre hileras de tulipanes y contempla el valle desde el mirador.">
-    <title>Campo de Tulipanes</title>
+    <meta name="description" content="Un paseo al atardecer entre senderos curvos y tulipanes en flor.">
+    <title>Jardín de Tulipanes</title>
   </head>
   <body>
     <main class="field" data-state="loading">
       <div class="still-view" aria-hidden="true"></div>
-      <canvas class="viewport" tabindex="-1" aria-label="Campo de tulipanes en primera persona"></canvas>
+      <canvas class="viewport" tabindex="-1" aria-label="Jardín de tulipanes en primera persona"></canvas>
       <section class="welcome" aria-labelledby="title">
         <div class="welcome-content">
           <div class="flower-mark" aria-hidden="true"><i></i></div>
-          <h1 id="title">Campo de<br><em>Tulipanes</em></h1>
-          <p>Camina entre las flores y sube al mirador.</p>
-          <button type="button" class="enter" disabled>Entrar al campo <span aria-hidden="true">→</span></button>
-          <p class="status" role="status">Preparando el campo…</p>
+          <h1 id="title">Jardín de<br><em>Tulipanes</em></h1>
+          <p>Sigue el sendero entre los tulipanes al atardecer.</p>
+          <button type="button" class="enter" disabled>Entrar al jardín <span aria-hidden="true">→</span></button>
+          <p class="status" role="status">Preparando el jardín…</p>
+          <button type="button" class="static-read" hidden>Leer la dedicatoria</button>
           <button type="button" class="retry" hidden>Reintentar <span aria-hidden="true">↻</span></button>
         </div>
       </section>
@@ -28,15 +29,21 @@
         </div>
         <div class="guide-panel" id="guide-panel" hidden>
           <p class="desktop-guide">Camina con WASD o las flechas arriba y abajo. Arrastra o usa ← → para girar.</p>
-          <p class="touch-guide">Usa el joystick para caminar y arrastra el campo para mirar.</p>
+          <p class="touch-guide">Usa el joystick para caminar y arrastra la pantalla para mirar.</p>
         </div>
         <p class="hint">
           <span class="desktop-guide"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> para caminar · Arrastra para mirar</span>
           <span class="touch-guide">Joystick para caminar · Arrastra para mirar</span>
         </p>
+        <button type="button" class="read-flower" hidden><kbd aria-hidden="true">E</kbd>Leer la dedicatoria</button>
         <div class="joystick" aria-hidden="true"><div class="knob"></div></div>
       </div>
-      <noscript>Activa JavaScript para recorrer el campo.</noscript>
+      <dialog class="dedication" aria-labelledby="dedication-title" aria-describedby="dedication-message">
+        <h2 id="dedication-title">Para ti</h2>
+        <p id="dedication-message">Entre tantas flores, mis ojos siempre te buscarían a ti.</p>
+        <button type="button" class="continue">Seguir paseando</button>
+      </dialog>
+      <noscript>Activa JavaScript para recorrer el jardín.</noscript>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

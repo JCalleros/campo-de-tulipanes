@@ -1,9 +1,9 @@
 import {
   Box3, BufferAttribute, BufferGeometry, Color, CylinderGeometry, DoubleSide, Group, InstancedMesh,
-  MeshStandardMaterial, Object3D,
+  Mesh, MeshStandardMaterial, Object3D,
 } from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { palette, sectorSize, type Sector } from './field';
+import { palette, sectorSize, specialFlower, type Sector } from './field';
 
 function tint(geometry: BufferGeometry, color: Color, isPetal: boolean): BufferGeometry {
   const count = geometry.getAttribute('position').count;
@@ -33,7 +33,7 @@ function surface(across: number, along: number, vertex: (u: number, v: number) =
   return mesh;
 }
 
-function makeFlower(detail: boolean) {
+function makeFlower(detail: boolean, special = false) {
   const stem = new CylinderGeometry(.013, .021, .68, detail ? 6 : 3, 1)
     .rotateZ(-.055).translate(.012, .34, 0);
   stem.deleteAttribute('uv');
@@ -48,13 +48,15 @@ function makeFlower(detail: boolean) {
     geometries.push(tint(leaf, new Color(i % 2 ? '#6d8b3b' : '#537838'), false));
   }
 
-  const petalCount = detail ? 6 : 3;
+  const petalCount = special ? 10 : detail ? 6 : 3;
   for (let i = 0; i < petalCount; i++) {
     const inner = i % 2 === 1 && detail;
-    const petal = surface(detail ? 6 : 3, detail ? 7 : 4, (u, v) => {
+    const across = special ? 12 : detail ? 6 : 3;
+    const along = special ? 16 : detail ? 7 : 4;
+    const petal = surface(across, along, (u, v) => {
       const width = (.01 + .115 * Math.sin(Math.PI * (v * .86 + .05)) ** .72) * (inner ? .89 : 1);
-      const curl = .031 + .116 * Math.sin(v * 2.12) + .047 * v;
-      return [u * width, .64 + v * (inner ? .265 : .29) - .046 * u * u * v ** 3,
+      const curl = .031 + .116 * Math.sin(v * 2.12) + .047 * v + (special ? .15 * v ** 2 : 0);
+      return [u * width * (special ? 1.24 : 1), .64 + v * (inner ? .265 : .29) - .046 * u * u * v ** 3,
         (curl - width * u * u * .53) * (inner ? .8 : 1)];
     });
     petal.rotateY(i * Math.PI * 2 / petalCount);
@@ -64,7 +66,12 @@ function makeFlower(detail: boolean) {
     const colors = petal.getAttribute('color');
     for (let j = 0; j < positions.count; j++) {
       const light = .52 + Math.min(1, Math.max(0, (positions.getY(j) - .64) / .28)) * .48;
-      colors.setXYZ(j, light, light, light);
+      if (special) {
+        const v = Math.floor(j / (across + 1)) / along;
+        const u = Math.abs(2 * (j % (across + 1)) / across - 1);
+        petalColor.set(v >= .93 || (u > .96 && v > .36) ? '#ffe386' : inner ? '#d74787' : '#fa84ae');
+        colors.setXYZ(j, petalColor.r * light, petalColor.g * light, petalColor.b * light);
+      } else colors.setXYZ(j, light, light, light);
     }
     geometries.push(petal);
   }
@@ -109,9 +116,15 @@ export function createFlowers(sectors: Sector[]) {
 
   const transform = new Object3D();
   const color = new Color();
+  const special = new Mesh(makeFlower(true, true), material);
+  special.position.set(specialFlower.x, specialFlower.y, specialFlower.z);
+  special.rotation.y = specialFlower.angle;
+  special.scale.setScalar(specialFlower.scale);
+  group.add(special);
   const plots = sectors.filter(plot => plot.flowers.length).map(plot => {
-    const mesh = new InstancedMesh(far, material, plot.flowers.length);
-    for (const [i, flower] of plot.flowers.entries()) {
+    const flowers = plot.flowers.filter(flower => flower !== specialFlower);
+    const mesh = new InstancedMesh(far, material, flowers.length);
+    for (const [i, flower] of flowers.entries()) {
       transform.position.set(flower.x, flower.y, flower.z);
       transform.rotation.set(0, flower.angle, 0);
       transform.scale.set(flower.scale, flower.scale * (.94 + .16 * flower.shade), flower.scale);
@@ -143,7 +156,7 @@ export function createFlowers(sectors: Sector[]) {
       lastX = x;
       lastZ = z;
       lastCompact = compact;
-      const nearRadius = compact ? 18 : 29;
+      const nearRadius = compact ? 6 : 10;
       const farRadius = compact ? 80 : 108;
       for (const plot of plots) {
         const dx = Math.max(0, Math.abs(x - plot.x) - sectorSize / 2);
@@ -157,6 +170,7 @@ export function createFlowers(sectors: Sector[]) {
     dispose(): void {
       for (const { mesh } of plots) mesh.dispose();
       material.dispose();
+      special.geometry.dispose();
       near.dispose();
       far.dispose();
     },

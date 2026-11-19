@@ -1,23 +1,33 @@
-export const fieldWidth = 384;
-export const fieldDepth = 288;
+import { CatmullRomCurve3, Vector3 } from 'three';
+
+export const fieldWidth = 48;
+export const fieldDepth = 36;
 export const halfWidth = fieldWidth / 2;
 export const halfDepth = fieldDepth / 2;
-export const sectorSize = 24;
-export const entrance = { x: 0, z: 130 };
-export const overlook = { x: 0, z: -117 };
+export const sectorSize = 6;
+export const pathRadius = 1.55;
+const route = [
+  [-9, 12], [-15, 9], [-18, 3], [-17, -5], [-12, -11], [-3, -13],
+  [6, -11], [13, -12], [18, -7], [19, 1], [16, 9], [8, 13], [0, 12],
+];
+const loop = new CatmullRomCurve3(route.map(([x, z]) => new Vector3(x, 0, z)), true);
+export const path = loop.getSpacedPoints(180);
+export const entrance = path[0];
+export const entranceYaw = Math.atan2(entrance.x - path[4].x, entrance.z - path[4].z);
+export const groundHeight = (x: number, z: number) => .13 * Math.cos(x / 11) * Math.sin(z / 9);
 
-const rowPitch = 2.8;
-const southJunction = 119;
-const northJunction = -117;
-
-export const palette = [
-  ['#fa433c', '#e52d34', '#c92738', '#fa514c'],
-  ['#f8bf42', '#ffdb6b'],
-  ['#fff1df', '#fff8ed'],
-  ['#f6a0ad', '#e77eaa'],
-  ['#fa7f40', '#ff9b51'],
-  ['#b87ac2', '#9d68ae'],
-] as const;
+export function distanceToPath(x: number, z: number): number {
+  let nearest = Infinity;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz)));
+    nearest = Math.min(nearest, (x - a.x - t * dx) ** 2 + (z - a.z - t * dz) ** 2);
+  }
+  return Math.sqrt(nearest) - pathRadius;
+}
 
 export function random(seed: number): () => number {
   return () => {
@@ -26,101 +36,56 @@ export function random(seed: number): () => number {
   };
 }
 
-export function pathCenter(z: number): number {
-  const t = Math.max(0, Math.min(1, (entrance.z - z) / (entrance.z - overlook.z)));
-  return -23 * Math.sin(t * Math.PI) + 7 * Math.sin(t * Math.PI * 2);
-}
-
-export function loopCenter(z: number): number | undefined {
-  if (z < northJunction || z > southJunction) return;
-  const progress = (southJunction - z) / (southJunction - northJunction);
-  return pathCenter(z) + 91 * Math.sin(Math.PI * progress) ** 1.1;
-}
-
-function rawHeight(x: number, z: number): number {
-  return 1.7 * Math.sin(x / 40 + z / 77) + 1.4 * Math.cos(z / 37 - x / 77)
-    + 15 * Math.exp(-((x / 77) ** 2 + ((z + 117) / 53) ** 2));
-}
-
-export function groundHeight(x: number, z: number): number {
-  const x0 = Math.floor(x / 2) * 2;
-  const z0 = Math.floor(z / 2) * 2;
-  const u = (x - x0) * .5;
-  const v = (z - z0) * .5;
-  const lower = rawHeight(x0, z0);
-  const right = rawHeight(x0 + 2, z0);
-  const upper = rawHeight(x0, z0 + 2);
-  if (u + v <= 1) return lower * (1 - u - v) + right * u + upper * v;
-  return rawHeight(x0 + 2, z0 + 2) * (u + v - 1) + right * (1 - v) + upper * (1 - u);
-}
-
-function rowBend(x: number): number {
-  return 4.1 * Math.sin(x / 58) + 2.5 * Math.sin(x / 24);
-}
-
-export function distanceToPath(x: number, z: number): number {
-  const lateral = loopCenter(z);
-  const path = Math.abs(x - pathCenter(z)) - 2.2;
-  const loop = lateral === undefined ? Infinity : Math.abs(x - lateral) - 1.45;
-  const viewpoint = Math.hypot(x - overlook.x, (z - overlook.z) * 1.1) - 7;
-  return Math.min(path, loop, viewpoint);
-}
-
-export function rowColor(x: number, z: number): number {
-  const row = Math.round((z - rowBend(x)) / rowPitch);
-  const block = Math.floor((x + halfWidth + row * 1.3) / 54);
-  const band = ((Math.floor(row / 3) * 7 + block * 3) % 20 + 20) % 20;
-  return band < 13 ? 0 : [1, 2, 3, 4, 5, 1, 5][band - 13];
-}
+export const palette = [
+  ['#dd474d', '#f16d67', '#c8394a'], ['#f8bd59', '#ffcf83'], ['#fff0dc', '#f7d8bf'],
+  ['#ee9eae', '#dd809c'], ['#e99170', '#ffa77e'], ['#a678ad', '#b896c5'],
+] as const;
 
 export interface Flower {
-  x: number;
-  y: number;
-  z: number;
-  scale: number;
-  angle: number;
-  color: number;
-  shade: number;
+  x: number; y: number; z: number; scale: number; angle: number; color: number; shade: number;
 }
+export interface Sector { x: number; z: number; flowers: Flower[] }
 
-export interface Sector {
-  x: number;
-  z: number;
-  flowers: Flower[];
-}
+export const beds = [
+  [-13, 4, 5.6, 7, 3], [-7, 6.4, 5, 3.7, 2], [.5, 5.8, 5.8, 3.4, 0],
+  [8.1, 6, 5.5, 3.6, 3], [12.8, .4, 3.7, 5, 4], [7.2, -6, 6.5, 3.5, 5],
+  [-2.5, -6.8, 6.1, 3.6, 1], [-10, -3, 5, 4.1, 0], [-1, .4, 4.3, 2.6, 3],
+  [-20, -2, 2.7, 8, 5], [-18, 11, 4.6, 4, 2], [-11, -13, 7.8, 2.6, 3],
+  [1, -14, 6, 2.4, 4], [15, -13.2, 6, 2.6, 2], [20.7, -3, 2, 7, 0],
+  [18.8, 10.5, 3.8, 4.4, 1], [6, 14.6, 7.6, 1.6, 5], [-7, 14.5, 6.8, 1.7, 4],
+] as const;
+
+const bend = loop.getPointAt(.16);
+const tangent = loop.getTangentAt(.16);
+const specialX = bend.x + tangent.z * (pathRadius + .15);
+const specialZ = bend.z - tangent.x * (pathRadius + .15);
+export const specialFlower: Flower = {
+  x: specialX, z: specialZ, y: groundHeight(specialX, specialZ),
+  scale: 1.35, angle: .4, color: 3, shade: .5,
+};
 
 export function plantField(): Sector[] {
   const columns = fieldWidth / sectorSize;
-  const rows = fieldDepth / sectorSize;
-  const sectors = Array.from({ length: columns * rows }, (_, i) => ({
+  const sectors = Array.from({ length: columns * fieldDepth / sectorSize }, (_, i) => ({
     x: (i % columns + .5) * sectorSize - halfWidth,
-    z: (Math.floor(i / columns) + .5) * sectorSize - halfDepth,
-    flowers: [] as Flower[],
+    z: (Math.floor(i / columns) + .5) * sectorSize - halfDepth, flowers: [] as Flower[],
   }));
+  function plant(flower: Flower): void {
+    const column = Math.floor((flower.x + halfWidth) / sectorSize);
+    const row = Math.floor((flower.z + halfDepth) / sectorSize);
+    sectors[row * columns + column].flowers.push(flower);
+  }
   const next = random(414239);
-  for (let row = -52; row <= 52; row++) {
-    for (let i = 0; i < 359; i++) {
-      const x = -183 + i * 1.02 + (next() - .5) * .35;
-      const z = row * rowPitch + rowBend(x) + (next() - .5) * .9;
-      if (Math.abs(z) > halfDepth - 6 || distanceToPath(x, z) < .5) continue;
-      const ix = Math.floor((x + halfWidth) / sectorSize);
-      const iz = Math.floor((z + halfDepth) / sectorSize);
-      sectors[iz * columns + ix].flowers.push({
-        x, y: groundHeight(x, z), z, scale: .84 + next() * .48, angle: next() * Math.PI * 2,
-        color: rowColor(x, z), shade: next(),
-      });
-      if (next() < .19) {
-        const offset = z + (next() > .5 ? .16 : -.16);
-        if (distanceToPath(x + .46, offset) < .5) continue;
-        const offsetX = Math.floor((x + .46 + halfWidth) / sectorSize);
-        const offsetZ = Math.floor((offset + halfDepth) / sectorSize);
-        sectors[offsetZ * columns + offsetX].flowers.push({
-          x: x + .46, y: groundHeight(x + .46, offset), z: offset,
-          scale: .76 + next() * .45, angle: next() * Math.PI * 2,
-          color: rowColor(x + .46, offset), shade: next(),
-        });
-      }
+  for (let row = -16; row <= 16; row += .87) {
+    for (let column = -22; column <= 22; column += .82) {
+      const x = column + (next() - .5) * .44;
+      const z = row + (next() - .5) * .44;
+      const bed = beds.find(([cx, cz, rx, rz]) => ((x - cx) / rx) ** 2 + ((z - cz) / rz) ** 2 < 1);
+      if (!bed || distanceToPath(x, z) < .27 || Math.hypot(x - specialX, z - specialZ) < .82) continue;
+      plant({ x, y: groundHeight(x, z), z, scale: .87 + next() * .23, angle: next() * Math.PI * 2,
+        color: bed[4], shade: next() });
     }
   }
+  plant(specialFlower);
   return sectors;
 }

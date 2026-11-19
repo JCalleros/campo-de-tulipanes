@@ -1,6 +1,6 @@
-# Campo de Tulipanes
+# Jardín de Tulipanes
 
-Recorre un campo de tulipanes en primera persona. Camina entre las hileras, explora los senderos y contempla el valle desde el mirador.
+Recorre un jardín de tulipanes en primera persona y descubre una dedicatoria al doblar el sendero. Al acercarte a la flor de borde dorado, pulsa E o usa el botón para leerla.
 
 ## Ejecutar en local
 

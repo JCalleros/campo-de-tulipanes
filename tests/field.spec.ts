@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-test('abre el campo y permite volver a la entrada', async ({ page, hasTouch }) => {
+test('abre el jardín y permite volver a la entrada', async ({ page, hasTouch }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
     if (message.type() === 'error' && /THREE.*shader/i.test(message.text())) errors.push(message.text());
   });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Campo de Tulipanes' })).toBeVisible();
-  const enter = page.getByRole('button', { name: 'Entrar al campo' });
+  await expect(page.getByRole('heading', { name: 'Jardín de Tulipanes' })).toBeVisible();
+  const enter = page.getByRole('button', { name: 'Entrar al jardín' });
   await expect(enter).toBeEnabled();
   if (hasTouch) await enter.tap();
   else await enter.focus().then(() => page.keyboard.press('Enter'));
@@ -33,7 +33,12 @@ test('muestra una alternativa si WebGL no está disponible', async ({ page }) =>
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Reintentar' })).toBeVisible();
   await expect(page.getByRole('status')).toContainText('recorrido 3D');
-  const image = await page.request.get('/mirador.webp');
+  const read = page.getByRole('button', { name: 'Leer la dedicatoria' });
+  await read.click();
+  await expect(page.getByRole('dialog')).toContainText('mis ojos siempre te buscarían a ti');
+  await page.getByRole('button', { name: 'Volver al jardín', exact: true }).click();
+  await expect(read).toBeFocused();
+  const image = await page.request.get('/jardin.webp');
   expect(image.ok()).toBe(true);
   expect(image.headers()['content-type']).toContain('image/webp');
 });
@@ -41,7 +46,7 @@ test('muestra una alternativa si WebGL no está disponible', async ({ page }) =>
 test('muestra el paisaje estático cuando se pierde el contexto', async ({ page }, info) => {
   test.skip(info.project.name !== 'chromium-escritorio', 'La pérdida de WebGL se comprueba una vez en Chromium');
   await page.goto('/');
-  await page.getByRole('button', { name: 'Entrar al campo' }).click();
+  await page.getByRole('button', { name: 'Entrar al jardín' }).click();
   const lost = await page.locator('canvas').evaluate(canvas => {
     const extension = canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context');
     extension?.loseContext();

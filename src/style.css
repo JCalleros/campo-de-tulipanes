@@ -21,7 +21,7 @@ button:focus-visible, canvas:focus-visible { outline: 2px solid #ffdb94; outline
 .viewport:active { cursor: grabbing; }
 .viewport:focus-visible { outline-offset: -4px; }
 .still-view {
-  background: #4d3c25 url('/mirador.webp') center 52% / cover no-repeat;
+  background: #4d3c25 url('/jardin.webp') center 52% / cover no-repeat;
   z-index: -1;
 }
 [data-state='loading'] .viewport, [data-state='unavailable'] .viewport { visibility: hidden; }
@@ -60,7 +60,7 @@ h1 {
 h1 em { font-weight: 580; color: #ffc08e; }
 .welcome-content > p { font-size: clamp(14px, 1.55vw, 19px); max-width: 29ch; margin: 23px 0; }
 .welcome-content .status { font-size: 13px; margin: 12px 0; color: #f5ddbb; }
-.enter, .retry {
+.enter, .retry, .static-read {
   min-height: 52px;
   padding: 13px 22px;
   background: #fbddb4;
@@ -134,3 +134,46 @@ kbd {
 @media (prefers-reduced-motion: reduce) { .welcome { transition: none; } }
 
 noscript { position: absolute; bottom: 18px; left: 18px; padding: 12px; background: #30231d; }
+
+.read-flower, .continue {
+  min-height: 46px;
+  padding: 11px 21px;
+  border: 1px solid #eed0a4;
+  border-radius: 6px;
+  font-weight: 750;
+  color: #40291e;
+  background: #ffe3ba;
+}
+.read-flower {
+  position: absolute;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(30px, env(safe-area-inset-bottom));
+  pointer-events: auto;
+  box-shadow: 0 3px 18px #31201666;
+}
+.hud:has(.read-flower:not([hidden])) .hint { display: none; }
+.static-read { margin: 4px 6px 4px 0; }
+.dedication {
+  width: min(410px, calc(100% - 32px));
+  max-height: calc(100dvh - 24px);
+  margin: auto max(5vw, 16px) max(5vh, 12px) auto;
+  padding: clamp(19px, 3.4vw, 38px);
+  border: 1px solid #cfad83;
+  border-radius: 12px;
+  color: #4a2c30;
+  background: linear-gradient(145deg, #fff6e8, #f5e4d1);
+  box-shadow: 0 12px 48px #2f21294a;
+}
+.dedication::backdrop { background: #27162042; }
+.dedication h2 { margin: 0; font: italic 520 20px 'Playfair Display Variable', Georgia, serif; color: #825146; }
+.dedication p { font: 510 clamp(23px, 3vw, 34px)/1.28 'Playfair Display Variable', Georgia, serif; margin: 12px 0 22px; }
+.continue { background: #583c41; color: #fff1de; border-color: transparent; }
+.read-flower kbd { color: #fff3de; background: #674843; margin-right: 7px; }
+@media (pointer: coarse) { .read-flower kbd { display: none; } }
+@media (max-width: 460px) and (orientation: portrait) {
+  .dedication { margin: max(20px, env(safe-area-inset-top)) auto auto; }
+}
+@media (max-height: 445px) and (orientation: landscape) {
+  .dedication { width: min(39vw, 350px); padding: 14px 18px; margin-right: max(14px, env(safe-area-inset-right)); }
+  .dedication p { font-size: 22px; margin: 7px 0 12px; }
+}

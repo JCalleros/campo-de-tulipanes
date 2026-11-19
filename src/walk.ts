@@ -1,12 +1,12 @@
 import type { PerspectiveCamera } from 'three';
 import type { createFieldCollision } from './collision';
-import { entrance, groundHeight } from './field';
+import { entrance, entranceYaw, groundHeight } from './field';
 
 const eyeHeight = 1.65;
 const walkingSpeed = 2.4;
 
 export class Walker {
-  private _yaw = .16;
+  private _yaw = entranceYaw;
   private _pitch = -.085;
 
   constructor(
@@ -18,7 +18,7 @@ export class Walker {
   }
 
   reset(): void {
-    this._yaw = .16;
+    this._yaw = entranceYaw;
     this._pitch = -.085;
     this._camera.position.set(entrance.x, groundHeight(entrance.x, entrance.z) + eyeHeight, entrance.z);
     this.look(0, 0);

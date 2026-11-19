@@ -1,12 +1,13 @@
-import { ACESFilmicToneMapping, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { ACESFilmicToneMapping, PerspectiveCamera, Scene, Vector3, WebGLRenderer } from 'three';
 import { createFieldCollision } from './collision';
 import { bindControls } from './controls';
-import { plantField } from './field';
+import { plantField, specialFlower } from './field';
 import { createFlowers } from './flowers';
 import { createLandscape } from './landscape';
 import { Walker } from './walk';
 
-export function createExperience(surface: HTMLCanvasElement, controls: ReturnType<typeof bindControls>) {
+export function createExperience(surface: HTMLCanvasElement, controls: ReturnType<typeof bindControls>,
+  onFlowerVisible: (visible: boolean) => void) {
   const gl = surface.getContext('webgl2', { alpha: false, antialias: true });
   if (!gl) throw new Error('WebGL 2 no disponible');
 
@@ -17,7 +18,7 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
   const camera = new PerspectiveCamera(62, 1, .08, 620);
   const sectors = plantField();
   const walker = new Walker(camera, createFieldCollision(sectors));
-  const landscape = createLandscape(scene);
+  const landscape = createLandscape(scene, sectors);
   const flowers = createFlowers(sectors);
   scene.add(flowers.group);
 
@@ -25,6 +26,23 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
   const touch = window.matchMedia('(pointer: coarse)');
   let compact = false;
   let exploring = false;
+  let paused = false;
+  let flowerVisible = false;
+  const blossom = new Vector3(specialFlower.x, specialFlower.y + .85 * specialFlower.scale, specialFlower.z);
+  const projected = new Vector3();
+
+  function updatePrompt(): void {
+    let visible = false;
+    if (exploring && !paused && (camera.position.x - blossom.x) ** 2 + (camera.position.z - blossom.z) ** 2 <= 4) {
+      camera.updateMatrixWorld();
+      projected.copy(blossom).project(camera);
+      visible = Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1 && Math.abs(projected.z) < 1;
+    }
+    if (visible !== flowerVisible) {
+      flowerVisible = visible;
+      onFlowerVisible(visible);
+    }
+  }
   let pixelRatio = 1;
   let lastFrame: number | undefined;
   let time = 0;
@@ -35,6 +53,7 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
   function draw(): void {
     landscape.sky.position.copy(camera.position);
     flowers.update(camera.position.x, camera.position.z, compact, time, reduced.matches);
+    updatePrompt();
     renderer.render(scene, camera);
   }
 
@@ -57,7 +76,7 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
     lastFrame = now;
     const elapsed = Math.min(.05, delta);
     time += elapsed;
-    if (exploring) controls.update(walker, elapsed);
+    if (exploring && !paused) controls.update(walker, elapsed);
     draw();
 
     if (!exploring || delta > .25 || delta <= 0) return;
@@ -77,13 +96,14 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
 
   function syncLoop(): void {
     lastFrame = undefined;
-    renderer.setAnimationLoop(document.hidden || (!exploring && reduced.matches) ? null : frame);
+    renderer.setAnimationLoop(document.hidden || paused || (!exploring && reduced.matches) ? null : frame);
     if (!document.hidden) draw();
   }
 
   try {
     size();
   } catch (error) {
+    landscape.dispose();
     flowers.dispose();
     renderer.dispose();
     throw error;
@@ -100,6 +120,11 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
       controls.activate(true);
       syncLoop();
     },
+    pause(value: boolean): void {
+      paused = value;
+      controls.activate(exploring && !paused);
+      syncLoop();
+    },
     reset(): void {
       controls.reset();
       walker.reset();
@@ -111,10 +136,7 @@ export function createExperience(surface: HTMLCanvasElement, controls: ReturnTyp
       resizeObserver.disconnect();
       document.removeEventListener('visibilitychange', syncLoop);
       reduced.removeEventListener('change', syncLoop);
-      for (const mesh of [landscape.sky, landscape.terrain]) {
-        mesh.geometry.dispose();
-        mesh.material.dispose();
-      }
+      landscape.dispose();
       flowers.dispose();
       renderer.dispose();
     },
